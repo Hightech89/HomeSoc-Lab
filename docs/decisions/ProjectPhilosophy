@@ -1,0 +1,35 @@
+# ADR-001: Home SOC Project Philosophy
+## Date
+
+2026-07-16
+
+## Context
+
+The purpose of this project is to build a Home Security Operations Center while learning Linux, Docker, networking, monitoring, logging, automation, and cybersecurity.
+
+Many homelabs become collections of software installed from tutorials without a clear understanding of why each service exists.
+
+This project intentionally avoids that approach.
+
+## Decision
+
+The Home SOC will be developed according to the following principles.
+
+- Understand before installing.
+- Every service must solve a real problem.
+- Build one layer at a time.
+- Documentation is part of the project.
+- Learn through experimentation.
+- Break things. Fix them. Learn why.
+- Security and ethics always come first.
+- AI should assist investigation, not replace understanding.
+
+## Consequences
+
+This project may progress more slowly than other homelabs.
+
+However, each component will be understood, documented, and intentionally integrated into the overall architecture.
+
+The objective is not to build the largest lab.
+
+The objective is to become a better engineer.
