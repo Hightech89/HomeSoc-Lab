@@ -1,6 +1,6 @@
 # Home SOC Lab
 
- A documented home cybersecurity lab focused on Linux, Docker, monitoring, logging, AI, and hands-on learning.
+A documented home cybersecurity lab focused on Linux, Docker, monitoring, logging, AI, and hands-on learning.
 
 ---
 
@@ -8,7 +8,7 @@
 
 Home SOC Lab is my long-term engineering project to learn modern infrastructure, cybersecurity, and systems administration by building and operating my own Security Operations Center (SOC) at home.
 
-This started out as a way to find something to do with an extra raspberrypi 4 I had laying around, and turned into something I think can be pretty big and fun to build. 
+This started out as a way to find something to do with an extra Raspberry Pi 4 I had laying around, and turned into something I think can be pretty big and fun to build.
 
 Every service added to this lab must solve a real problem and contribute to my understanding of the systems I'm building.
 
@@ -49,12 +49,20 @@ Current foundation:
 
 - Raspberry Pi 4
 - Raspberry Pi OS Lite (64-bit)
-- Tailscale
 - SSH
 - Docker
 - Portainer
 - Uptime Kuma
 - Netdata
+- Grafana, installed but paused
+- External SSD / log storage
+
+Current access and operations notes:
+
+- SSH is enabled for administration.
+- Portainer, Netdata, and Uptime Kuma are running.
+- Grafana is installed but intentionally paused until there is a stronger data-source need.
+- Protected remote access is planned; dashboards should not be exposed directly to the public internet.
 
 Future architecture will continue to evolve as new services are added.
 
@@ -62,45 +70,45 @@ Future architecture will continue to evolve as new services are added.
 
 ## Roadmap
 
-### Phase 1 — Foundation ✅
+### Phase 1 - Foundation
 
 - Raspberry Pi OS
 - SSH
-- Tailscale
-- Remote Administration
+- Local administration
+- Protected remote access planning
 
-### Phase 2 — Infrastructure ✅
+### Phase 2 - Infrastructure
 
 - Docker
 - Portainer
 
-### Phase 3 — Monitoring 🚧
+### Phase 3 - Monitoring
 
 - Uptime Kuma
 - Netdata
-- Grafana
-- Prometheus
+- Grafana, installed but paused
+- Prometheus, deferred until needed
 
-### Phase 4 — Logging
+### Phase 4 - Logging
 
 - Loki
 - Promtail
 
-### Phase 5 — Security
+### Phase 5 - Security
 
 - CrowdSec
 - Suricata
 - Zeek
-- Wazuh (or similar)
+- Wazuh or similar
 
-### Phase 6 — Automation
+### Phase 6 - Automation
 
 - Container updates
 - Backups
 - Notifications
 - Scheduled maintenance
 
-### Phase 7 — AI
+### Phase 7 - AI
 
 SOC Copilot
 
@@ -137,6 +145,6 @@ Eventually, this lab may become the foundation for future cybersecurity projects
 
 Current Version
 
-**v0.1 — Foundation**
+**v0.2 - Current lab baseline**
 
 ---
