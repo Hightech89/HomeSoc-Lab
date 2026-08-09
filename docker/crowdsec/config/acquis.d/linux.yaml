@@ -1,0 +1,7 @@
+# Read-only host logs mounted from ${HOST_LOG_DIR:-/var/log} to /var/log/host.
+# Keep this narrow until additional log sources are documented and tested.
+filenames:
+  - /var/log/host/auth.log
+  - /var/log/host/syslog
+labels:
+  type: syslog

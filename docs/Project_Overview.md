@@ -84,7 +84,7 @@ Keep the environment organized.
 ### Upcoming
 
 - Decide on the log collector path
-- Evaluate CrowdSec
+- Review and deploy the prepared CrowdSec configuration
 - Wazuh
 - Loki
 - SOC Copilot
