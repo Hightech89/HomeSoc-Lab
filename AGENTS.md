@@ -1,5 +1,26 @@
 # AGENTS.md
 
+## Session Startup
+
+At the beginning of every session:
+
+1. Read the repository before making any changes.
+2. Pay special attention to:
+   - README.md
+   - PROJECT_OVERVIEW.md
+   - PROJECT_STATE.md
+   - ARCHITECTURE.md
+   - docs/
+3. Summarize your understanding of:
+   - Current architecture
+   - Active services
+   - Current sprint
+   - Planned roadmap
+4. Ask questions if anything is unclear.
+5. Do not begin implementation until the user approves the plan.
+
+Assume documentation may have changed since the previous session.
+
 ## Purpose
 
 This repository is maintained with the assistance of AI coding agents.
