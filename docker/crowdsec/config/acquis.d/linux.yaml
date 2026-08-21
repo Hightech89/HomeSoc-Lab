@@ -7,11 +7,9 @@ labels:
   type: syslog
 ---
 # Raspberry Pi OS may write SSH authentication events to journald instead of
-# /var/log/auth.log. The host journal is mounted read-only at /var/log/host/journal.
+# /var/log/auth.log. The host journal is mounted read-only at /run/log/journal.
 source: journalctl
 journalctl_filter:
-  - "-D"
-  - "/var/log/host/journal"
   - "_SYSTEMD_UNIT=ssh.service"
   - "_SYSTEMD_UNIT=sshd.service"
 labels:

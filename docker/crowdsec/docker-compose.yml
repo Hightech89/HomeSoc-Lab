@@ -2,7 +2,7 @@ name: homesoc-crowdsec
 
 services:
   crowdsec:
-    image: crowdsecurity/crowdsec:${CROWDSEC_IMAGE_TAG:-latest}
+    image: crowdsecurity/crowdsec:${CROWDSEC_IMAGE_TAG:-v1.7.8-debian}
     container_name: ${CROWDSEC_CONTAINER_NAME:-crowdsec}
     restart: unless-stopped
     init: true
@@ -17,7 +17,7 @@ services:
       - crowdsec-data:/var/lib/crowdsec/data
       - ./config/acquis.d:/etc/crowdsec/acquis.d:ro
       - ${HOST_LOG_DIR:-/var/log}:/var/log/host:ro
-      - ${HOST_JOURNAL_DIR:-/run/log/journal}:/var/log/host/journal:ro
+      - ${HOST_JOURNAL_DIR:-/run/log/journal}:/run/log/journal:ro
     networks:
       - homesoc
     healthcheck:

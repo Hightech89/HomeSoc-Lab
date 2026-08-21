@@ -6,6 +6,8 @@ This folder contains the Docker Compose deployment definition for CrowdSec in th
 
 CrowdSec is being introduced as a detection engine first. This deployment does not install a bouncer, firewall integration, or active blocking component.
 
+This deployment uses the pinned Debian CrowdSec image `crowdsecurity/crowdsec:v1.7.8-debian`. The Debian image is required for journald acquisition because it includes the `journalctl` tooling used by the CrowdSec journald datasource. The tag is pinned instead of using `latest-debian` so Home SOC deployments stay reproducible and do not change behavior unexpectedly when upstream images are updated.
+
 ## Current Scope
 
 This deployment watches Linux host logs and SSH-related activity from the Raspberry Pi SOC host.
@@ -48,13 +50,19 @@ The host log directory is mounted read-only at `/var/log/host`.
 
 This lets CrowdSec read logs without allowing the container to modify host logs.
 
+### Pinned Debian Image
+
+The deployment uses `crowdsecurity/crowdsec:v1.7.8-debian`.
+
+CrowdSec's default Docker image is intentionally minimal and does not include `journalctl`. The official Docker guidance uses the Debian image variant for journald support. The Home SOC pins a specific Debian tag instead of tracking `latest-debian` so a future container pull does not silently upgrade CrowdSec during normal maintenance.
+
 ### Read-Only Host Journal
 
-The host systemd journal directory is mounted read-only at `/var/log/host/journal`.
+The host systemd journal directory is mounted read-only at `/run/log/journal` inside the container.
 
 Raspberry Pi OS can write SSH authentication events to the systemd journal instead of `/var/log/auth.log`. The deployment keeps the original file-based acquisition for Linux hosts that still write traditional auth and syslog files, and adds journald acquisition so the Raspberry Pi SOC host can detect SSH authentication failures where they actually appear.
 
-By default, `.env.example` points `HOST_JOURNAL_DIR` to `/run/log/journal`. If the Raspberry Pi uses persistent journald storage, set `HOST_JOURNAL_DIR` to `/var/log/journal` in `.env`.
+By default, `.env.example` points `HOST_JOURNAL_DIR` to `/run/log/journal`. If the Raspberry Pi uses persistent journald storage, set `HOST_JOURNAL_DIR` to `/var/log/journal` in `.env`; Compose will still mount that host path to `/run/log/journal` inside the container, which keeps the acquisition configuration stable.
 
 ### Local API Bound to Loopback
 
@@ -102,6 +110,12 @@ cp .env.example .env
 If `.env` already exists on the Raspberry Pi, do not overwrite it. Add any new variables from `.env.example` and keep the existing local values that are already correct.
 
 Review `.env` and update any values that differ on the Raspberry Pi.
+
+Confirm the pinned Debian image tag is present:
+
+```bash
+CROWDSEC_IMAGE_TAG=v1.7.8-debian
+```
 
 Check where journald stores the Raspberry Pi host journal:
 
@@ -171,6 +185,7 @@ Check CrowdSec status:
 
 ```bash
 docker compose exec crowdsec cscli lapi status
+docker compose exec crowdsec which journalctl
 docker compose exec crowdsec cscli metrics
 docker compose exec crowdsec cscli metrics show acquisition
 docker compose exec crowdsec cscli collections list
