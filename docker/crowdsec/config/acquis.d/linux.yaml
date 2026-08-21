@@ -1,7 +1,18 @@
 # Read-only host logs mounted from ${HOST_LOG_DIR:-/var/log} to /var/log/host.
-# Keep this narrow until additional log sources are documented and tested.
+# Keep file-based acquisition for Linux hosts that still write auth/syslog files.
 filenames:
   - /var/log/host/auth.log
   - /var/log/host/syslog
+labels:
+  type: syslog
+---
+# Raspberry Pi OS may write SSH authentication events to journald instead of
+# /var/log/auth.log. The host journal is mounted read-only at /var/log/host/journal.
+source: journalctl
+journalctl_filter:
+  - "-D"
+  - "/var/log/host/journal"
+  - "_SYSTEMD_UNIT=ssh.service"
+  - "_SYSTEMD_UNIT=sshd.service"
 labels:
   type: syslog

@@ -17,6 +17,7 @@ services:
       - crowdsec-data:/var/lib/crowdsec/data
       - ./config/acquis.d:/etc/crowdsec/acquis.d:ro
       - ${HOST_LOG_DIR:-/var/log}:/var/log/host:ro
+      - ${HOST_JOURNAL_DIR:-/run/log/journal}:/var/log/host/journal:ro
     networks:
       - homesoc
     healthcheck:

@@ -19,6 +19,7 @@ Initial log sources:
 
 - `/var/log/auth.log`
 - `/var/log/syslog`
+- systemd journal entries for `ssh.service` or `sshd.service`
 
 ## Design Decisions
 
@@ -47,6 +48,14 @@ The host log directory is mounted read-only at `/var/log/host`.
 
 This lets CrowdSec read logs without allowing the container to modify host logs.
 
+### Read-Only Host Journal
+
+The host systemd journal directory is mounted read-only at `/var/log/host/journal`.
+
+Raspberry Pi OS can write SSH authentication events to the systemd journal instead of `/var/log/auth.log`. The deployment keeps the original file-based acquisition for Linux hosts that still write traditional auth and syslog files, and adds journald acquisition so the Raspberry Pi SOC host can detect SSH authentication failures where they actually appear.
+
+By default, `.env.example` points `HOST_JOURNAL_DIR` to `/run/log/journal`. If the Raspberry Pi uses persistent journald storage, set `HOST_JOURNAL_DIR` to `/var/log/journal` in `.env`.
+
 ### Local API Bound to Loopback
 
 The CrowdSec Local API is bound to `127.0.0.1:8080` by default.
@@ -70,8 +79,9 @@ This follows the current Home SOC network direction and avoids silently creating
 - Docker installed on the Raspberry Pi
 - Docker Compose v2 available as `docker compose`
 - Existing `homesoc` Docker network, or a deliberate decision to create it
-- Host logs available under `/var/log`
-- Permission for the container to read `/var/log/auth.log` and `/var/log/syslog`
+- Host logs available under `/var/log` for file-based acquisition
+- Host journal available under `/run/log/journal` or `/var/log/journal` for Raspberry Pi OS SSH authentication events
+- Permission for the container to read the mounted log and journal paths
 
 ## Installation
 
@@ -89,7 +99,35 @@ On Linux:
 cp .env.example .env
 ```
 
+If `.env` already exists on the Raspberry Pi, do not overwrite it. Add any new variables from `.env.example` and keep the existing local values that are already correct.
+
 Review `.env` and update any values that differ on the Raspberry Pi.
+
+Check where journald stores the Raspberry Pi host journal:
+
+```bash
+ls -ld /run/log/journal /var/log/journal
+journalctl -u ssh.service -n 20
+```
+
+If `/var/log/journal` exists and contains the persistent host journal, update `.env`:
+
+```bash
+HOST_JOURNAL_DIR=/var/log/journal
+```
+
+Otherwise keep the default:
+
+```bash
+HOST_JOURNAL_DIR=/run/log/journal
+```
+
+If CrowdSec reports permission errors reading journal files, set `CROWDSEC_GID` in `.env` to a host group ID that can read the journal:
+
+```bash
+getent group systemd-journal
+getent group adm
+```
 
 Check whether the Home SOC network exists:
 
@@ -134,7 +172,15 @@ Check CrowdSec status:
 ```bash
 docker compose exec crowdsec cscli lapi status
 docker compose exec crowdsec cscli metrics
+docker compose exec crowdsec cscli metrics show acquisition
 docker compose exec crowdsec cscli collections list
+```
+
+For SSH detection validation, generate a failed SSH login attempt from another machine, then check that acquisition lines increase and alerts appear:
+
+```bash
+docker compose exec crowdsec cscli metrics show acquisition
+docker compose exec crowdsec cscli alerts list
 ```
 
 ## Maintenance

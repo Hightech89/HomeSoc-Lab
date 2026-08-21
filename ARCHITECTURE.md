@@ -34,7 +34,7 @@ The documented environment includes:
 - External SSD / log storage
 - Home router / firewall
 
-The repository currently documents the intended architecture, includes a reference operations workbook, and contains a prepared CrowdSec Compose deployment under `docker/crowdsec/`. CrowdSec is not documented as deployed or active yet. Most other service folders remain placeholders and do not yet contain deployable configuration.
+The repository currently documents the intended architecture, includes a reference operations workbook, and contains an active CrowdSec detection-only Compose deployment under `docker/crowdsec/`. Most other service folders remain placeholders and do not yet contain deployable configuration.
 
 ## High-Level System View
 
@@ -59,7 +59,7 @@ Docker Runtime
         +-- Uptime Kuma
         +-- Netdata
         +-- Grafana, installed / paused
-        +-- CrowdSec, prepared / not deployed
+        +-- CrowdSec, active / detection only
 ```
 
 ## Current Installed Services
@@ -191,11 +191,11 @@ Current repository status:
 
 ### CrowdSec
 
-CrowdSec is prepared in version control but is not deployed yet.
+CrowdSec is active in Docker Compose as a detection-only security service.
 
 Current role:
 
-- Future security detection engine
+- Security detection engine
 - Initial Linux and SSH log analysis
 - Detection-only security layer until a bouncer is approved separately
 
@@ -205,7 +205,9 @@ Current repository status:
 - Service README exists at `docker/crowdsec/README.md`
 - Environment template exists at `docker/crowdsec/.env.example`
 - Initial acquisition file exists at `docker/crowdsec/config/acquis.d/linux.yaml`
-- Not active in the current lab state
+- Active in detection-only mode
+- Acquires traditional Linux auth/syslog files where present
+- Acquires Raspberry Pi OS SSH authentication events from the systemd journal
 - No remediation component or blocking bouncer is configured
 
 ## Reference Port Inventory
@@ -220,7 +222,7 @@ The reference workbook lists these current and planned access points:
 | Netdata | 19999 | `http://<raspberry-pi-ip>:19999` | Running |
 | Uptime Kuma | 3001 | `http://<raspberry-pi-ip>:3001` | Running |
 | SSH | 22 | `ssh josh@<raspberry-pi-ip>` | Enabled |
-| CrowdSec Local API | 8080 | `http://127.0.0.1:8080` | Prepared / not deployed |
+| CrowdSec Local API | 8080 | `http://127.0.0.1:8080` | Active / detection only |
 | Prometheus | 9090 | `http://<raspberry-pi-ip>:9090` | Planned |
 
 ## Current Asset Inventory
@@ -260,7 +262,7 @@ Raspberry Pi OS
       |
       +-- Grafana is installed but paused until useful data sources exist
       |
-      +-- CrowdSec is prepared for future Linux and SSH log detection
+      +-- CrowdSec detects Linux and SSH events without active blocking
 ```
 
 Important current boundaries:
@@ -272,7 +274,7 @@ Important current boundaries:
 - Uptime Kuma is the availability monitoring layer.
 - Netdata is the host and infrastructure metrics layer.
 - Grafana is installed but paused until there is enough useful data to visualize.
-- CrowdSec is prepared but not yet part of the active runtime.
+- CrowdSec is active in detection-only mode and has no bouncer configured.
 
 ## Planned Architecture Direction
 
@@ -291,7 +293,7 @@ Near-term priorities documented in the repository are:
 - Keep Portainer, Netdata, and Uptime Kuma stable
 - Document the current Docker network layout
 - Decide on the log collector path
-- Review and deploy the prepared CrowdSec configuration when ready
+- Continue validating CrowdSec acquisition, metrics, and alert behavior
 - Wazuh, Loki, and SOC Copilot as upcoming work
 - Prometheus and advanced Grafana dashboards as planned or deferred until justified by a stronger data-source need
 
@@ -308,7 +310,7 @@ The long-term vision is a documented Home Security Operations Center capable of:
 
 ### Version-Controlled Service Definitions
 
-The repository now contains a prepared CrowdSec Compose deployment. Other active services are not yet captured as deployable service configuration.
+The repository now contains an active CrowdSec Compose deployment. Other active services are not yet captured as deployable service configuration.
 
 Missing examples:
 
@@ -377,11 +379,11 @@ Missing examples:
 
 ### Security Detection Layer
 
-CrowdSec deployment files are prepared, but the security detection layer is not yet active in the lab.
+CrowdSec is active as the first security detection layer in the lab.
 
 Missing examples:
 
-- CrowdSec deployment validation on the Raspberry Pi
+- Ongoing CrowdSec acquisition and alert validation on the Raspberry Pi
 - Wazuh configuration
 - Suricata or Zeek design notes
 - Detection rules
@@ -587,7 +589,7 @@ Recommended use:
 1. Document the currently installed services in `docs/services/`.
 2. Add a simple network and ports inventory.
 3. Add a first operational runbook for checking Raspberry Pi and Docker health.
-4. Validate the prepared CrowdSec Compose file on the Raspberry Pi before deployment.
+4. Continue validating CrowdSec acquisition and alert behavior on the Raspberry Pi.
 5. Capture the existing Portainer, Netdata, Uptime Kuma, and Grafana setup in Compose after verifying how each service was installed.
 6. Keep Grafana paused until Prometheus, Loki, or another useful data source is ready.
 
