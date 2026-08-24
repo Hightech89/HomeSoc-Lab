@@ -4,9 +4,18 @@
 
 This folder contains the Docker Compose deployment definition for CrowdSec in the Home SOC lab.
 
-CrowdSec is being introduced as a detection engine first. This deployment does not install a bouncer, firewall integration, or active blocking component.
+CrowdSec is active in the Home SOC lab as a detection engine first. This deployment does not install a bouncer, firewall integration, or active blocking component.
 
 This deployment uses the pinned Debian CrowdSec image `crowdsecurity/crowdsec:v1.7.8-debian`. The Debian image is required for journald acquisition because it includes the `journalctl` tooling used by the CrowdSec journald datasource. The tag is pinned instead of using `latest-debian` so Home SOC deployments stay reproducible and do not change behavior unexpectedly when upstream images are updated.
+
+## Current Status
+
+- Status: Active
+- Mode: Detection-only
+- Management: Docker Compose
+- Blocking: Not enabled
+- Bouncer: Not installed
+- Local API: Bound to `127.0.0.1:8080` by default
 
 ## Current Scope
 
@@ -91,9 +100,9 @@ This follows the current Home SOC network direction and avoids silently creating
 - Host journal available under `/run/log/journal` or `/var/log/journal` for Raspberry Pi OS SSH authentication events
 - Permission for the container to read the mounted log and journal paths
 
-## Installation
+## Deployment and Rebuild Notes
 
-Do not run these commands until you are ready to deploy CrowdSec.
+CrowdSec is already deployed in the current Home SOC baseline. Use these notes when rebuilding the service, validating the Compose file, or deploying to a replacement host.
 
 From this folder:
 
@@ -161,15 +170,15 @@ Validate the Compose file without starting the service:
 docker compose config
 ```
 
-Deploy only when ready:
+Deploy or recreate the service when ready:
 
 ```bash
 docker compose up -d
 ```
 
-## First-Run Validation
+## Validation
 
-After deployment, check container health:
+After deployment or maintenance, check container health:
 
 ```bash
 docker compose ps
@@ -271,8 +280,8 @@ Document the source, path, parser label, and reason before enabling it.
 - Add router or firewall log ingestion after the log source is documented
 - Evaluate whether a firewall bouncer is appropriate
 - Add notification profiles after alert review workflow is defined
-- Add service-level monitoring in Uptime Kuma after deployment
-- Record deployment details in the operations workbook after the service is actually deployed
+- Add service-level monitoring in Uptime Kuma
+- Keep deployment details aligned with `project_state.md`, `ARCHITECTURE.md`, and the operations workbook
 
 ## References
 

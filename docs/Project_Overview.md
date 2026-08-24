@@ -6,7 +6,7 @@ The Home SOC (Security Operations Center) project is a long-term cybersecurity l
 
 The goal is not simply to install software, but to understand how modern security operations, infrastructure monitoring, automation, and AI-assisted analysis work together in a real environment.
 
-This repository serves as the single source of truth for the project.
+This document describes the project goals and direction. The current deployment state is tracked in `project_state.md`, and architecture details are tracked in `ARCHITECTURE.md`.
 
 ## Project Goals
 
@@ -72,6 +72,7 @@ Keep the environment organized.
 - Portainer
 - Netdata
 - Uptime Kuma
+- CrowdSec (active, detection-only, Docker Compose managed)
 - Grafana (installed, currently paused)
 
 ## Near-Term Roadmap
@@ -80,11 +81,11 @@ Keep the environment organized.
 
 - Keep Portainer, Netdata, and Uptime Kuma stable
 - Document the current Docker network layout
+- Continue learning CrowdSec metrics and alert behavior
 
 ### Upcoming
 
 - Decide on the log collector path
-- Review and deploy the prepared CrowdSec configuration
 - Wazuh
 - Loki
 - SOC Copilot

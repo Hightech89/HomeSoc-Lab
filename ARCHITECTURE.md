@@ -31,6 +31,7 @@ The documented environment includes:
 - Uptime Kuma
 - Netdata
 - Grafana, installed but currently paused
+- CrowdSec, active detection-only
 - External SSD / log storage
 - Home router / firewall
 
@@ -106,8 +107,8 @@ Current role:
 Current repository status:
 
 - Documented in `README.md` and `docs/Project_Overview.md`
-- Placeholder folders exist under `docker/`
-- No Docker Compose file or service definitions are currently stored in the repository
+- CrowdSec has a Docker Compose deployment under `docker/crowdsec/`
+- Other active service folders under `docker/` remain placeholders until their running configuration is documented and migrated when useful
 
 ### Portainer
 

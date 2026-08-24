@@ -55,6 +55,7 @@ Current foundation:
 - Uptime Kuma
 - Netdata
 - Grafana, installed but paused
+- CrowdSec, active detection-only
 - External SSD / log storage
 
 Current access and operations notes:
@@ -62,9 +63,12 @@ Current access and operations notes:
 - SSH is enabled for administration.
 - Portainer, Netdata, and Uptime Kuma are running.
 - Grafana is installed but intentionally paused until there is a stronger data-source need.
+- CrowdSec is active, managed with Docker Compose, and running in detection-only mode without a bouncer or active blocking.
 - Protected remote access is planned; dashboards should not be exposed directly to the public internet.
 
 Future architecture will continue to evolve as new services are added.
+
+For detailed current state, see `project_state.md`. For service relationships and ports, see `ARCHITECTURE.md`.
 
 ---
 
@@ -96,7 +100,7 @@ Future architecture will continue to evolve as new services are added.
 
 ### Phase 5 - Security
 
-- CrowdSec
+- CrowdSec, active detection-only
 - Suricata
 - Zeek
 - Wazuh or similar
@@ -145,6 +149,6 @@ Eventually, this lab may become the foundation for future cybersecurity projects
 
 Current Version
 
-**v0.2 - Current lab baseline**
+**v0.3 - CrowdSec detection baseline**
 
 ---

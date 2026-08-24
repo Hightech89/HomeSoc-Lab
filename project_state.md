@@ -2,7 +2,7 @@
 
 **Version:** 0.3
 
-Last Updated: 2026-08-09
+Last Updated: 2026-08-24
 
 ---
 
@@ -72,8 +72,9 @@ Deployment Methods
 
 Source of Truth
 
-- GitHub Repository
-- Operations Manual (Excel)
+- `project_state.md` is the current deployment-state summary.
+- `ARCHITECTURE.md` describes service relationships, ports, and boundaries.
+- `HomeSOC Reference Sheet.xlsx` remains the operations manual for inventory, checklists, and operational tracking.
 
 ---
 
