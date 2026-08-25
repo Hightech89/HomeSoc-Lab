@@ -69,7 +69,7 @@ find_repo_dir() {
     return 0
   fi
 
-  for candidate in "${HOME:-}/Projects/HomeSoc-Lab" "/home/josh/Projects/HomeSoc-Lab" "/opt/HomeSoc-Lab"; do
+  for candidate in "${HOME:-}/HomeSoc-Lab" "${HOME:-}/Projects/HomeSoc-Lab" "/home/josh/Projects/HomeSoc-Lab" "/opt/HomeSoc-Lab"; do
     if is_homesoc_repo_dir "$candidate"; then
       printf '%s' "$candidate"
       return 0
