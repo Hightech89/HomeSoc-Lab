@@ -72,6 +72,17 @@ For detailed current state, see `project_state.md`. For service relationships an
 
 ---
 
+## Home SOC Utilities
+
+Operational helper commands live in `scripts/` and are documented under `docs/utilities/`.
+
+- `homesoc-status` provides a read-only Home SOC status summary.
+- `homesoc-update` is the standard deployment command after pushing repository changes from Cyberdeck. It runs `git pull`, reinstalls Home SOC utilities, prints an update summary, and launches `homesoc-status`.
+
+`homesoc-update` only updates repository files and Home SOC utility commands. It does not modify Docker services, restart containers, or run Docker Compose.
+
+---
+
 ## Roadmap
 
 ### Phase 1 - Foundation

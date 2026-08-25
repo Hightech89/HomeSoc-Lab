@@ -1,0 +1,228 @@
+#!/usr/bin/env bash
+
+set -u
+
+EXIT_OK=0
+EXIT_REPO_NOT_FOUND=10
+EXIT_GIT_MISSING=11
+EXIT_GIT_PULL_FAILED=12
+EXIT_INSTALL_FAILED=13
+EXIT_STATUS_FAILED=14
+
+COLOR_RESET="\033[0m"
+COLOR_HEADER="\033[1;36m"
+COLOR_LABEL="\033[1;37m"
+COLOR_GREEN="\033[0;32m"
+COLOR_YELLOW="\033[0;33m"
+COLOR_RED="\033[0;31m"
+
+command_exists() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+is_homesoc_repo_dir() {
+  local candidate="$1"
+
+  [[ -n "$candidate" ]] || return 1
+  [[ -f "$candidate/README.md" ]] || return 1
+  [[ -f "$candidate/project_state.md" ]] || return 1
+  [[ -f "$candidate/ARCHITECTURE.md" ]] || return 1
+  [[ -d "$candidate/.git" ]] || return 1
+}
+
+find_repo_dir() {
+  local script_dir git_dir candidate
+
+  if is_homesoc_repo_dir "${HOMESOC_REPO:-}"; then
+    cd "${HOMESOC_REPO}" 2>/dev/null && pwd
+    return 0
+  fi
+
+  if command_exists git; then
+    git_dir="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+    if is_homesoc_repo_dir "$git_dir"; then
+      printf '%s' "$git_dir"
+      return 0
+    fi
+  fi
+
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+  candidate="$(cd "$script_dir/.." 2>/dev/null && pwd)"
+  if is_homesoc_repo_dir "$candidate"; then
+    printf '%s' "$candidate"
+    return 0
+  fi
+
+  for candidate in "${HOME:-}/HomeSoc-Lab" "${HOME:-}/Projects/HomeSoc-Lab" "/home/josh/Projects/HomeSoc-Lab" "/opt/HomeSoc-Lab"; do
+    if is_homesoc_repo_dir "$candidate"; then
+      printf '%s' "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+print_line() {
+  printf '%b\n' "${COLOR_HEADER}═══════════════════════════════════════${COLOR_RESET}"
+}
+
+print_header() {
+  print_line
+  printf '%b\n' "${COLOR_HEADER} HOME SOC UPDATE${COLOR_RESET}"
+  print_line
+  printf '\n'
+}
+
+print_field() {
+  printf '  %b%-18s%b %s\n' "${COLOR_LABEL}" "$1" "${COLOR_RESET}" "$2"
+}
+
+print_error() {
+  printf '%bError:%b %s\n' "${COLOR_RED}" "${COLOR_RESET}" "$1" >&2
+}
+
+print_success() {
+  printf '%b%s%b\n' "${COLOR_GREEN}" "$1" "${COLOR_RESET}"
+}
+
+get_git_head() {
+  git rev-parse HEAD 2>/dev/null
+}
+
+run_git_pull() {
+  git pull 2>&1
+}
+
+print_update_summary() {
+  local before_head="$1"
+  local after_head="$2"
+  local pull_output="$3"
+
+  printf '%b\n' "${COLOR_HEADER}Update Summary${COLOR_RESET}"
+  print_field "Repository" "$REPO_DIR"
+  print_field "Branch" "$(git branch --show-current 2>/dev/null || printf 'Unavailable')"
+
+  if [[ "$before_head" == "$after_head" ]]; then
+    print_field "Result" "No new commits pulled"
+  else
+    print_field "Result" "Repository updated"
+    print_field "Before" "$(git rev-parse --short "$before_head" 2>/dev/null || printf '%s' "$before_head")"
+    print_field "After" "$(git rev-parse --short "$after_head" 2>/dev/null || printf '%s' "$after_head")"
+  fi
+
+  printf '\n%b\n' "${COLOR_HEADER}Git Pull Output${COLOR_RESET}"
+  printf '%s\n' "$pull_output"
+
+  if [[ "$before_head" != "$after_head" ]]; then
+    printf '\n%b\n' "${COLOR_HEADER}Changed Files${COLOR_RESET}"
+    git diff --name-status "$before_head" "$after_head" 2>/dev/null || printf '  Unable to summarize changed files\n'
+  fi
+
+  printf '\n'
+}
+
+run_installers() {
+  local installer installer_name install_status failed
+
+  failed=0
+  printf '%b\n' "${COLOR_HEADER}Utility Installers${COLOR_RESET}"
+
+  shopt -s nullglob
+  for installer in "$REPO_DIR"/scripts/install-homesoc-*.sh; do
+    installer_name="$(basename "$installer")"
+    printf '  Running %s\n' "$installer_name"
+    chmod +x "$installer"
+    "$installer"
+    install_status=$?
+    if [[ "$install_status" -ne 0 ]]; then
+      printf '  %bFailed%b %s exited with %s\n' "${COLOR_RED}" "${COLOR_RESET}" "$installer_name" "$install_status"
+      failed=1
+    fi
+  done
+  shopt -u nullglob
+
+  if [[ "$failed" -ne 0 ]]; then
+    return 1
+  fi
+
+  print_success "Utility installers completed"
+  printf '\n'
+  return 0
+}
+
+run_homesoc_status() {
+  printf '%b\n' "${COLOR_HEADER}Launching homesoc-status${COLOR_RESET}"
+
+  if command_exists homesoc-status; then
+    homesoc-status
+    return $?
+  fi
+
+  if [[ -x "$REPO_DIR/scripts/homesoc-status" ]]; then
+    "$REPO_DIR/scripts/homesoc-status"
+    return $?
+  fi
+
+  print_error "homesoc-status is not installed and was not found in the repository."
+  return 1
+}
+
+main() {
+  local before_head after_head pull_output pull_status
+
+  print_header
+
+  if ! command_exists git; then
+    print_error "git is required but was not found."
+    exit "$EXIT_GIT_MISSING"
+  fi
+
+  REPO_DIR="$(find_repo_dir || true)"
+  if [[ -z "$REPO_DIR" ]]; then
+    print_error "HomeSoc-Lab repository was not found."
+    exit "$EXIT_REPO_NOT_FOUND"
+  fi
+
+  cd "$REPO_DIR" || {
+    print_error "Unable to enter repository at $REPO_DIR."
+    exit "$EXIT_REPO_NOT_FOUND"
+  }
+
+  before_head="$(get_git_head)"
+  if [[ -z "$before_head" ]]; then
+    print_error "Unable to read the current git commit."
+    exit "$EXIT_GIT_PULL_FAILED"
+  fi
+
+  printf '%b\n' "${COLOR_HEADER}Pulling repository updates${COLOR_RESET}"
+  pull_output="$(run_git_pull)"
+  pull_status=$?
+  if [[ "$pull_status" -ne 0 ]]; then
+    printf '%s\n' "$pull_output"
+    print_error "git pull failed with status $pull_status."
+    exit "$EXIT_GIT_PULL_FAILED"
+  fi
+
+  after_head="$(get_git_head)"
+  if [[ -z "$after_head" ]]; then
+    print_error "Unable to read the updated git commit."
+    exit "$EXIT_GIT_PULL_FAILED"
+  fi
+
+  print_update_summary "$before_head" "$after_head" "$pull_output"
+
+  if ! run_installers; then
+    print_error "One or more Home SOC utility installers failed."
+    exit "$EXIT_INSTALL_FAILED"
+  fi
+
+  if ! run_homesoc_status; then
+    print_error "homesoc-status failed."
+    exit "$EXIT_STATUS_FAILED"
+  fi
+
+  exit "$EXIT_OK"
+}
+
+main "$@"
