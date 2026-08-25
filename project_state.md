@@ -70,6 +70,11 @@ Deployment Methods
 - Portainer (legacy services)
 - Docker Compose (new services)
 
+Home SOC Operations Toolkit
+
+- `homesoc-status` for read-only operational status checks
+- `homesoc-update` for repository and utility deployment after Cyberdeck pushes
+
 Source of Truth
 
 - `project_state.md` is the current deployment-state summary.
