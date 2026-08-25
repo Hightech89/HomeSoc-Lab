@@ -23,13 +23,21 @@ The installer places the utility at:
 /usr/local/bin/homesoc-status
 ```
 
+It also writes the local repository path to:
+
+```text
+/etc/default/homesoc-status
+```
+
+That file sets `HOMESOC_REPO` so installed runs can read project metadata from the repository regardless of the current working directory.
+
 After installation, run:
 
 ```bash
 homesoc-status
 ```
 
-If the repository is moved away from the default `~/Projects/HomeSoc-Lab` location, set `HOMESOC_REPO` so footer metadata can still be read from project documentation:
+If the repository is moved after installation, rerun the installer from the new location or set `HOMESOC_REPO` for the current shell:
 
 ```bash
 export HOMESOC_REPO=/path/to/HomeSoc-Lab

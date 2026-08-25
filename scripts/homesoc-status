@@ -10,6 +10,7 @@ COLOR_RED="\033[0;31m"
 COLOR_WHITE="\033[1;37m"
 COLOR_YELLOW="\033[0;33m"
 COLOR_DIM="\033[2m"
+CONFIG_FILE="/etc/default/homesoc-status"
 
 SERVICE_DEFINITIONS=(
   "Portainer|portainer"
@@ -21,6 +22,19 @@ SERVICE_DEFINITIONS=(
 
 command_exists() {
   command -v "$1" >/dev/null 2>&1
+}
+
+load_config() {
+  local configured_repo
+
+  configured_repo="${HOMESOC_REPO:-}"
+  if [[ -r "$CONFIG_FILE" ]]; then
+    # shellcheck disable=SC1090
+    . "$CONFIG_FILE"
+  fi
+  if [[ -n "$configured_repo" ]]; then
+    HOMESOC_REPO="$configured_repo"
+  fi
 }
 
 is_homesoc_repo_dir() {
@@ -65,6 +79,7 @@ find_repo_dir() {
   return 1
 }
 
+load_config
 REPO_DIR="$(find_repo_dir || true)"
 
 print_line() {
