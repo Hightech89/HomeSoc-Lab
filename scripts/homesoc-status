@@ -1,0 +1,557 @@
+#!/usr/bin/env bash
+
+set -u
+
+COLOR_RESET="\033[0m"
+COLOR_HEADER="\033[1;36m"
+COLOR_LABEL="\033[1;37m"
+COLOR_GREEN="\033[0;32m"
+COLOR_RED="\033[0;31m"
+COLOR_WHITE="\033[1;37m"
+COLOR_YELLOW="\033[0;33m"
+COLOR_DIM="\033[2m"
+
+SERVICE_DEFINITIONS=(
+  "Portainer|portainer"
+  "Netdata|netdata"
+  "Uptime Kuma|uptime-kuma|uptimekuma"
+  "CrowdSec|crowdsec"
+  "Grafana|grafana"
+)
+
+command_exists() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+is_homesoc_repo_dir() {
+  local candidate="$1"
+
+  [[ -n "$candidate" ]] || return 1
+  [[ -f "$candidate/README.md" ]] || return 1
+  [[ -f "$candidate/project_state.md" ]] || return 1
+  [[ -f "$candidate/ARCHITECTURE.md" ]] || return 1
+}
+
+find_repo_dir() {
+  local script_dir git_dir candidate
+
+  if is_homesoc_repo_dir "${HOMESOC_REPO:-}"; then
+    cd "${HOMESOC_REPO}" 2>/dev/null && pwd
+    return 0
+  fi
+
+  if command_exists git; then
+    git_dir="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+    if is_homesoc_repo_dir "$git_dir"; then
+      printf '%s' "$git_dir"
+      return 0
+    fi
+  fi
+
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+  candidate="$(cd "$script_dir/.." 2>/dev/null && pwd)"
+  if is_homesoc_repo_dir "$candidate"; then
+    printf '%s' "$candidate"
+    return 0
+  fi
+
+  for candidate in "${HOME:-}/Projects/HomeSoc-Lab" "/home/josh/Projects/HomeSoc-Lab" "/opt/HomeSoc-Lab"; do
+    if is_homesoc_repo_dir "$candidate"; then
+      printf '%s' "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+REPO_DIR="$(find_repo_dir || true)"
+
+print_line() {
+  printf '%b\n' "${COLOR_HEADER}═══════════════════════════════════════${COLOR_RESET}"
+}
+
+print_header() {
+  print_line
+  printf '%b\n' "${COLOR_HEADER} HOME SOC STATUS${COLOR_RESET}"
+  print_line
+  printf '\n'
+}
+
+print_section_title() {
+  printf '%b\n' "${COLOR_HEADER}$1${COLOR_RESET}"
+}
+
+print_field() {
+  printf '  %b%-22s%b %s\n' "${COLOR_LABEL}" "$1" "${COLOR_RESET}" "$2"
+}
+
+format_unknown() {
+  printf '%bUnavailable%b' "${COLOR_YELLOW}" "${COLOR_RESET}"
+}
+
+first_non_empty() {
+  local value
+  for value in "$@"; do
+    if [[ -n "$value" ]]; then
+      printf '%s' "$value"
+      return 0
+    fi
+  done
+  return 1
+}
+
+get_hostname() {
+  hostname 2>/dev/null || printf 'unknown'
+}
+
+get_datetime() {
+  date '+%Y-%m-%d %H:%M:%S %Z' 2>/dev/null || printf 'unknown'
+}
+
+get_uptime() {
+  uptime -p 2>/dev/null || uptime 2>/dev/null | sed 's/^ *//' || printf 'unknown'
+}
+
+get_kernel() {
+  uname -r 2>/dev/null || printf 'unknown'
+}
+
+get_cpu_temperature() {
+  local temp_file temp_millic temp_c
+
+  for temp_file in /sys/class/thermal/thermal_zone*/temp; do
+    [[ -r "$temp_file" ]] || continue
+    temp_millic="$(sed -n '1p' "$temp_file" 2>/dev/null)"
+    [[ "$temp_millic" =~ ^[0-9]+$ ]] || continue
+    temp_c="$(awk -v temp="$temp_millic" 'BEGIN { printf "%.1f C", temp / 1000 }')"
+    printf '%s' "$temp_c"
+    return 0
+  done
+
+  printf 'Not available'
+}
+
+get_cpu_usage() {
+  local cpu_line idle total usage
+
+  cpu_line="$(LC_ALL=C top -bn1 2>/dev/null | awk '/Cpu\(s\)|%Cpu/ { print; exit }')"
+  if [[ -n "$cpu_line" ]]; then
+    idle="$(printf '%s\n' "$cpu_line" | awk -F',' '{
+      for (i = 1; i <= NF; i++) {
+        if ($i ~ /id/) {
+          gsub(/[^0-9.]/, "", $i)
+          print $i
+          exit
+        }
+      }
+    }')"
+    if [[ "$idle" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+      usage="$(awk -v idle="$idle" 'BEGIN { printf "%.1f%%", 100 - idle }')"
+      printf '%s' "$usage"
+      return 0
+    fi
+  fi
+
+  printf 'Unavailable'
+}
+
+get_memory_usage() {
+  free -m 2>/dev/null | awk '/^Mem:/ {
+    used=$3
+    total=$2
+    if (total > 0) {
+      printf "%dMiB / %dMiB (%.1f%%)", used, total, used / total * 100
+    }
+  }'
+}
+
+get_disk_usage() {
+  df -h / 2>/dev/null | awk 'NR == 2 { printf "%s / %s (%s)", $3, $2, $5 }'
+}
+
+get_local_ip() {
+  local ip_addr
+
+  ip_addr="$(hostname -I 2>/dev/null | awk '{ print $1 }')"
+  if [[ -z "$ip_addr" ]] && command_exists ip; then
+    ip_addr="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{ for (i = 1; i <= NF; i++) if ($i == "src") { print $(i + 1); exit } }')"
+  fi
+
+  first_non_empty "$ip_addr" "Unavailable"
+}
+
+get_tailscale_ip() {
+  if ! command_exists tailscale; then
+    printf 'Not installed'
+    return 0
+  fi
+
+  tailscale ip -4 2>/dev/null | sed -n '1p'
+}
+
+docker_available() {
+  command_exists docker && docker info >/dev/null 2>&1
+}
+
+get_docker_version() {
+  if ! command_exists docker; then
+    printf 'Not installed'
+    return 0
+  fi
+
+  docker --version 2>/dev/null | sed 's/^Docker version //; s/,.*//' || printf 'Unavailable'
+}
+
+get_compose_version() {
+  if command_exists docker && docker compose version >/dev/null 2>&1; then
+    docker compose version --short 2>/dev/null || docker compose version 2>/dev/null | sed 's/^Docker Compose version //'
+    return 0
+  fi
+
+  if command_exists docker-compose; then
+    docker-compose version --short 2>/dev/null || docker-compose version 2>/dev/null | sed 's/^docker-compose version //; s/,.*//'
+    return 0
+  fi
+
+  printf 'Not installed'
+}
+
+get_running_container_count() {
+  if ! docker_available; then
+    printf 'Unavailable'
+    return 0
+  fi
+
+  docker ps -q 2>/dev/null | wc -l | awk '{ print $1 }'
+}
+
+docker_container_exists() {
+  local pattern="$1"
+
+  docker ps -a --format '{{.Names}} {{.Image}}' 2>/dev/null | awk -v pattern="$pattern" '
+    BEGIN {
+      n = split(pattern, parts, "|")
+    }
+    {
+      line = tolower($0)
+      for (i = 1; i <= n; i++) {
+        if (parts[i] != "" && line ~ parts[i]) {
+          found = 1
+        }
+      }
+    }
+    END {
+      exit found ? 0 : 1
+    }'
+}
+
+docker_container_running() {
+  local pattern="$1"
+
+  docker ps --format '{{.Names}} {{.Image}}' 2>/dev/null | awk -v pattern="$pattern" '
+    BEGIN {
+      n = split(pattern, parts, "|")
+    }
+    {
+      line = tolower($0)
+      for (i = 1; i <= n; i++) {
+        if (parts[i] != "" && line ~ parts[i]) {
+          found = 1
+        }
+      }
+    }
+    END {
+      exit found ? 0 : 1
+    }'
+}
+
+get_service_status() {
+  local pattern="$1"
+
+  if ! command_exists docker; then
+    printf 'not-installed'
+    return 0
+  fi
+
+  if ! docker_available; then
+    printf 'unavailable'
+    return 0
+  fi
+
+  if docker_container_running "$pattern"; then
+    printf 'running'
+  elif docker_container_exists "$pattern"; then
+    printf 'stopped'
+  else
+    printf 'not-installed'
+  fi
+}
+
+format_service_status() {
+  case "$1" in
+    running)
+      printf '%b🟢 Running%b' "${COLOR_GREEN}" "${COLOR_RESET}"
+      ;;
+    stopped)
+      printf '%b🔴 Stopped%b' "${COLOR_RED}" "${COLOR_RESET}"
+      ;;
+    not-installed)
+      printf '%b⚪ Not Installed%b' "${COLOR_WHITE}" "${COLOR_RESET}"
+      ;;
+    *)
+      printf '%bUnavailable%b' "${COLOR_YELLOW}" "${COLOR_RESET}"
+      ;;
+  esac
+}
+
+get_crowdsec_container_name() {
+  docker ps --format '{{.Names}} {{.Image}}' 2>/dev/null | awk '
+    tolower($0) ~ /crowdsec/ {
+      print $1
+      exit
+    }'
+}
+
+crowdsec_exec() {
+  local container_name="$1"
+  shift
+
+  docker exec "$container_name" "$@" 2>/dev/null
+}
+
+get_crowdsec_alerts() {
+  local container_name="$1"
+  local count
+
+  count="$(crowdsec_exec "$container_name" cscli alerts list -o json | awk '
+    /"id":/ { count++ }
+    END { print count + 0 }
+  ')"
+
+  first_non_empty "$count" "Unavailable"
+}
+
+get_crowdsec_decisions() {
+  local container_name="$1"
+  local count
+
+  count="$(crowdsec_exec "$container_name" cscli decisions list -o json | awk '
+    /"id":/ { count++ }
+    END { print count + 0 }
+  ')"
+
+  first_non_empty "$count" "Unavailable"
+}
+
+get_crowdsec_parsers() {
+  local container_name="$1"
+  local count
+
+  count="$(crowdsec_exec "$container_name" cscli parsers list -o raw | awk '
+    NR > 1 && $1 != "" { count++ }
+    END { print count + 0 }
+  ')"
+
+  if [[ "$count" == "0" ]]; then
+    count="$(crowdsec_exec "$container_name" cscli parsers list | awk '
+      /^crowdsecurity\// { count++ }
+      END { print count + 0 }
+    ')"
+  fi
+
+  first_non_empty "$count" "Unavailable"
+}
+
+inside_git_repo() {
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1
+}
+
+inside_homesoc_repo() {
+  local top_level
+
+  [[ -n "$REPO_DIR" ]] || return 1
+  inside_git_repo || return 1
+  top_level="$(git rev-parse --show-toplevel 2>/dev/null)"
+  [[ "$top_level" == "$REPO_DIR" ]]
+}
+
+get_git_branch() {
+  git branch --show-current 2>/dev/null || git rev-parse --short HEAD 2>/dev/null || printf 'Unavailable'
+}
+
+get_git_tree_state() {
+  if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
+    printf '%bDirty%b' "${COLOR_YELLOW}" "${COLOR_RESET}"
+  else
+    printf '%bClean%b' "${COLOR_GREEN}" "${COLOR_RESET}"
+  fi
+}
+
+get_git_last_commit() {
+  git log -1 --pretty=format:'%h %s' 2>/dev/null || printf 'Unavailable'
+}
+
+extract_home_soc_version() {
+  [[ -n "$REPO_DIR" ]] || return 1
+
+  awk '
+    /^Current Version$/ {
+      found = 1
+      next
+    }
+    found && /^\*\*/ {
+      gsub(/\*\*/, "")
+      print
+      exit
+    }
+  ' "$REPO_DIR/README.md" 2>/dev/null
+}
+
+extract_project_state_version() {
+  [[ -n "$REPO_DIR" ]] || return 1
+
+  awk -F'[*:]+' '/^\*\*Version:\*\*/ {
+    gsub(/^ +| +$/, "", $3)
+    print $3
+    exit
+  }' "$REPO_DIR/project_state.md" 2>/dev/null
+}
+
+extract_current_sprint() {
+  [[ -n "$REPO_DIR" ]] || return 1
+
+  awk '
+    /^## In Progress$/ {
+      in_progress = 1
+      next
+    }
+    in_progress && /^## / {
+      exit
+    }
+    in_progress && /^- / {
+      sub(/^- /, "")
+      if (items != "") {
+        items = items ", " $0
+      } else {
+        items = $0
+      }
+    }
+    END {
+      print items
+    }
+  ' "$REPO_DIR/project_state.md" 2>/dev/null
+}
+
+print_system_section() {
+  local memory_usage disk_usage
+
+  print_section_title "System"
+  print_field "Hostname" "$(get_hostname)"
+  print_field "Current date/time" "$(get_datetime)"
+  print_field "Uptime" "$(get_uptime)"
+  print_field "Kernel version" "$(get_kernel)"
+  print_field "CPU temperature" "$(get_cpu_temperature)"
+  print_field "CPU usage" "$(first_non_empty "$(get_cpu_usage)" "$(format_unknown)")"
+  memory_usage="$(get_memory_usage)"
+  disk_usage="$(get_disk_usage)"
+  print_field "Memory usage" "$(first_non_empty "$memory_usage" "$(format_unknown)")"
+  print_field "Disk usage" "$(first_non_empty "$disk_usage" "$(format_unknown)")"
+  printf '\n'
+}
+
+print_network_section() {
+  local tailscale_ip
+
+  print_section_title "Network"
+  print_field "Local IP" "$(get_local_ip)"
+  tailscale_ip="$(get_tailscale_ip)"
+  print_field "Tailscale IP" "$(first_non_empty "$tailscale_ip" "Unavailable")"
+  printf '\n'
+}
+
+print_docker_section() {
+  print_section_title "Docker"
+  print_field "Docker version" "$(get_docker_version)"
+  print_field "Docker Compose version" "$(get_compose_version)"
+  print_field "Running containers" "$(get_running_container_count)"
+  printf '\n'
+}
+
+print_services_section() {
+  local definition name pattern status
+
+  print_section_title "Services"
+  for definition in "${SERVICE_DEFINITIONS[@]}"; do
+    IFS='|' read -r name pattern _ <<< "$definition"
+    pattern="${definition#*|}"
+    status="$(get_service_status "$pattern")"
+    print_field "$name" "$(format_service_status "$status")"
+  done
+  printf '\n'
+}
+
+print_crowdsec_section() {
+  local status container_name
+
+  print_section_title "CrowdSec"
+  status="$(get_service_status "crowdsec")"
+  if [[ "$status" != "running" ]]; then
+    print_field "Status" "$(format_service_status "$status")"
+    printf '\n'
+    return 0
+  fi
+
+  container_name="$(get_crowdsec_container_name)"
+  if [[ -z "$container_name" ]]; then
+    print_field "Status" "$(format_unknown)"
+    printf '\n'
+    return 0
+  fi
+
+  print_field "Active alerts" "$(get_crowdsec_alerts "$container_name")"
+  print_field "Active decisions" "$(get_crowdsec_decisions "$container_name")"
+  print_field "Parser count" "$(get_crowdsec_parsers "$container_name")"
+  printf '\n'
+}
+
+print_git_section() {
+  print_section_title "Git"
+  if ! inside_homesoc_repo; then
+    print_field "Repository" "Not inside HomeSoc-Lab"
+    printf '\n'
+    return 0
+  fi
+
+  print_field "Current branch" "$(get_git_branch)"
+  print_field "Working tree" "$(get_git_tree_state)"
+  print_field "Last commit" "$(get_git_last_commit)"
+  printf '\n'
+}
+
+print_footer() {
+  local home_soc_version project_state_version current_sprint
+
+  home_soc_version="$(extract_home_soc_version)"
+  project_state_version="$(extract_project_state_version)"
+  current_sprint="$(extract_current_sprint)"
+
+  print_line
+  print_field "Home SOC Version" "$(first_non_empty "$home_soc_version" "Unavailable")"
+  print_field "Current Sprint" "$(first_non_empty "$current_sprint" "Unavailable")"
+  print_field "Project State Version" "$(first_non_empty "$project_state_version" "Unavailable")"
+  print_line
+}
+
+main() {
+  print_header
+  print_system_section
+  print_network_section
+  print_docker_section
+  print_services_section
+  print_crowdsec_section
+  print_git_section
+  print_footer
+}
+
+main "$@"
