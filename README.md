@@ -55,7 +55,7 @@ Current foundation:
 - Uptime Kuma
 - Netdata
 - Grafana, installed but paused
-- CrowdSec, active detection-only
+- CrowdSec, active detection-only and operationally validated
 - External SSD / log storage
 
 Current access and operations notes:
@@ -63,7 +63,7 @@ Current access and operations notes:
 - SSH is enabled for administration.
 - Portainer, Netdata, and Uptime Kuma are running.
 - Grafana is installed but intentionally paused until there is a stronger data-source need.
-- CrowdSec is active, managed with Docker Compose, and running in detection-only mode without a bouncer or active blocking.
+- CrowdSec is active, managed with Docker Compose, and running in detection-only mode without a bouncer or active blocking. SSH brute-force detection has been validated against live Raspberry Pi OS journald authentication events.
 - Protected remote access is planned; dashboards should not be exposed directly to the public internet.
 
 Future architecture will continue to evolve as new services are added.
@@ -121,7 +121,7 @@ homesoc-update
 
 ### Phase 5 - Security
 
-- CrowdSec, active detection-only
+- CrowdSec, active detection-only with validated SSH brute-force detection
 - Suricata
 - Zeek
 - Wazuh or similar

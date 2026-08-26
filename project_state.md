@@ -2,7 +2,7 @@
 
 **Version:** 0.3
 
-Last Updated: 2026-08-24
+Last Updated: 2026-08-26
 
 ---
 
@@ -20,7 +20,7 @@ The Home SOC is operational and is transitioning from manually managed services 
 | Portainer | Active | Docker |
 | Netdata | Active | Portainer |
 | Uptime Kuma | Active | Portainer |
-| CrowdSec | Active (Detection Only) | Docker Compose |
+| CrowdSec | Active (Detection Only, Validated) | Docker Compose |
 
 ---
 
@@ -50,11 +50,12 @@ The Home SOC is operational and is transitioning from manually managed services 
 - Codex project configured
 - CrowdSec deployed with Docker Compose
 - CrowdSec verified operational
+- CrowdSec journald acquisition, SSH parsing, brute-force scenarios, alerts, and decisions validated through live testing
 
 ## In Progress
 
-- Learn CrowdSec
-- Explore metrics and alerts
+- Review CrowdSec alerts and decisions during normal lab operation
+- Document CrowdSec operational lessons learned
 
 ## Next Sprint
 
@@ -80,6 +81,10 @@ Source of Truth
 - `project_state.md` is the current deployment-state summary.
 - `ARCHITECTURE.md` describes service relationships, ports, and boundaries.
 - `HomeSOC Reference Sheet.xlsx` remains the operations manual for inventory, checklists, and operational tracking.
+
+Completed Milestones
+
+- 2026-08-26: CrowdSec operational validation completed. Live Raspberry Pi OS SSH authentication events were read from journald, parsed by CrowdSec, matched by SSH brute-force scenarios, and produced alerts and detection-only decisions.
 
 ---
 

@@ -31,7 +31,7 @@ The documented environment includes:
 - Uptime Kuma
 - Netdata
 - Grafana, installed but currently paused
-- CrowdSec, active detection-only
+- CrowdSec, active detection-only with validated SSH brute-force detection
 - External SSD / log storage
 - Home router / firewall
 
@@ -192,13 +192,13 @@ Current repository status:
 
 ### CrowdSec
 
-CrowdSec is active in Docker Compose as a detection-only security service.
+CrowdSec is active in Docker Compose as a validated detection-only security service.
 
 Current role:
 
 - Security detection engine
 - Initial Linux and SSH log analysis
-- Detection-only security layer until a bouncer is approved separately
+- Detection-only security layer until a bouncer or other blocking component is approved separately
 
 Current repository status:
 
@@ -209,7 +209,8 @@ Current repository status:
 - Active in detection-only mode
 - Acquires traditional Linux auth/syslog files where present
 - Acquires Raspberry Pi OS SSH authentication events from the systemd journal
-- No remediation component or blocking bouncer is configured
+- Journald acquisition, SSH parser metrics, SSH brute-force scenarios, alerts, and decisions have been validated through live testing
+- No remediation component, blocking bouncer, or active blocking path is configured
 
 ## Reference Port Inventory
 
@@ -263,7 +264,7 @@ Raspberry Pi OS
       |
       +-- Grafana is installed but paused until useful data sources exist
       |
-      +-- CrowdSec detects Linux and SSH events without active blocking
+      +-- CrowdSec detects Linux and SSH brute-force activity without active blocking
 ```
 
 Important current boundaries:
@@ -275,7 +276,7 @@ Important current boundaries:
 - Uptime Kuma is the availability monitoring layer.
 - Netdata is the host and infrastructure metrics layer.
 - Grafana is installed but paused until there is enough useful data to visualize.
-- CrowdSec is active in detection-only mode and has no bouncer configured.
+- CrowdSec is active in detection-only mode and has no bouncer or blocking component configured.
 
 ## Planned Architecture Direction
 
@@ -294,7 +295,7 @@ Near-term priorities documented in the repository are:
 - Keep Portainer, Netdata, and Uptime Kuma stable
 - Document the current Docker network layout
 - Decide on the log collector path
-- Continue validating CrowdSec acquisition, metrics, and alert behavior
+- Review CrowdSec acquisition, metrics, alerts, and decisions during normal lab operation
 - Wazuh, Loki, and SOC Copilot as upcoming work
 - Prometheus and advanced Grafana dashboards as planned or deferred until justified by a stronger data-source need
 
@@ -590,7 +591,7 @@ Recommended use:
 1. Document the currently installed services in `docs/services/`.
 2. Add a simple network and ports inventory.
 3. Add a first operational runbook for checking Raspberry Pi and Docker health.
-4. Continue validating CrowdSec acquisition and alert behavior on the Raspberry Pi.
+4. Review CrowdSec acquisition, alerts, and decisions during normal lab operation.
 5. Capture the existing Portainer, Netdata, Uptime Kuma, and Grafana setup in Compose after verifying how each service was installed.
 6. Keep Grafana paused until Prometheus, Loki, or another useful data source is ready.
 

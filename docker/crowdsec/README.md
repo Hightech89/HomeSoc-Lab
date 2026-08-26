@@ -13,6 +13,7 @@ This deployment uses the pinned Debian CrowdSec image `crowdsecurity/crowdsec:v1
 - Status: Active
 - Mode: Detection-only
 - Management: Docker Compose
+- Validation: Complete for journald SSH acquisition and SSH brute-force detection
 - Blocking: Not enabled
 - Bouncer: Not installed
 - Local API: Bound to `127.0.0.1:8080` by default
@@ -200,12 +201,45 @@ docker compose exec crowdsec cscli metrics show acquisition
 docker compose exec crowdsec cscli collections list
 ```
 
-For SSH detection validation, generate a failed SSH login attempt from another machine, then check that acquisition lines increase and alerts appear:
+## Validation Results
+
+CrowdSec operational validation was completed on the Raspberry Pi SOC host.
+
+Validated results:
+
+- Debian image deployment confirmed with `crowdsecurity/crowdsec:v1.7.8-debian`
+- `journalctl` confirmed available inside the container
+- Journald datasource confirmed operational
+- Live SSH authentication events confirmed readable from the host systemd journal
+- Acquisition metrics confirmed lines being read and parsed
+- SSH parser metrics confirmed active
+- SSH brute-force scenarios confirmed active
+- Controlled live SSH brute-force testing generated CrowdSec alerts
+- CrowdSec decisions were created successfully
+- No bouncer is configured, so all decisions are detection-only and do not block traffic
+
+### Empty Acquisition Metrics
+
+`cscli metrics show acquisition` can be empty when CrowdSec is correctly configured but has not read any new matching log lines since the container started. CrowdSec tails live acquisitions at startup, so the next validation step is to generate a fresh SSH event while watching the journal and CrowdSec metrics.
+
+From the CrowdSec Compose folder, confirm the container can see live SSH journal entries:
+
+```bash
+docker compose exec crowdsec journalctl --follow --lines=0 _SYSTEMD_UNIT=ssh.service
+```
+
+From another terminal or another machine, make one controlled failed SSH login attempt against the Raspberry Pi. Then check whether acquisition counters increased:
 
 ```bash
 docker compose exec crowdsec cscli metrics show acquisition
 docker compose exec crowdsec cscli alerts list
 ```
+
+Interpretation:
+
+- If `journalctl --follow` shows the failed login but CrowdSec acquisition stays empty, troubleshoot the journald datasource configuration.
+- If acquisition shows lines read but lines are unparsed, troubleshoot the parser label and installed collections.
+- If acquisition shows parsed lines but no alerts, continue generating enough controlled failures to trigger the SSH scenario threshold before changing configuration.
 
 ## Maintenance
 
